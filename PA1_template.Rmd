@@ -8,18 +8,97 @@ output:
 
 ## Loading and preprocessing the data
 
+```{r}
+#1. Load the data
 
+data <- read.csv("activity.csv")
+
+#2. Convert the class of the date column from factor to Date.
+
+data$date <- as.Date(data$date)
+```
 
 ## What is mean total number of steps taken per day?
+
+1. Total number of steps taken per day
+
+```{r}
+ts <- aggregate(steps~date,data,sum)
+ts
+```
+
+2. Histogram of the total number of steps taken each day
+
+```{r}
+par(mar=c(5, 4, 4, 2) + 0.1)
+hist(ts$steps,main="Total Number of Steps Taken Each Day",xlab="Number of Steps")
+```
+
+3. The mean and median of the total number of steps taken per day
+
+```{r}
+mean(ts$steps)
+
+median(ts$steps)
+```
 
 
 
 ## What is the average daily activity pattern?
 
+```{r}
+as <- aggregate(steps~interval,data,mean)
+plot(as$interval,as$steps,type="l",main="Average Number of Steps Taken for Each Interval",xlab="5-minute Interval",ylab="Average Number of Steps Taken")
 
+maxsteps <- as$interval[which(as$steps==max(as$steps))]
+```
+The No. `r maxsteps` interval contains the maxium number of steps.
 
 ## Imputing missing values
 
+The total number of missing values in the dataset is
+```{r}
+sum(is.na(data$steps))
+```
 
+Use the mean for the 5-minute interval to fill in all of the missing values
+
+```{r}
+newdata <- data
+for (i in 1:nrow(newdata)) if(is.na(newdata$steps[i]))newdata$steps[i] <- as$steps[which(newdata$interval[i]==as$interval)]
+```
+
+Make a histogram of the total number of steps taken each day
+```{r}
+ts2 <- aggregate(steps~date,newdata,sum)
+hist(ts2$steps,main="Total Number of Steps Taken Each Day After filling in all NAs",xlab="Number of Steps")
+```
+
+The mean and median total number of steps taken per day
+```{r}
+# The mean
+mean(ts2$steps)
+
+# The median
+median(ts2$steps)
+```
+
+The mean doesn't change becuase I filled in means for each 5-minute interval. However, the median changed a bit, from 10765 to 10766.19.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r,echo=TRUE}
+# Weekday or weekend
+library(chron)
+library(plyr)
+newdata <- mutate(newdata,day=is.weekend(date))
+for (i in 1:nrow(newdata)) if(newdata$day[i]) newdata$day[i] <- "weekend" else newdata$day[i] <- "weekday"
+invisible(as.factor(newdata$day))
+
+# Make a panel plot
+library(lattice)
+mstep <- aggregate(newdata$steps,by=list(newdata$interval,newdata$day),mean)
+names(mstep) <- c("interval","day","steps")
+xyplot(steps~interval | day, mstep,type="l",layout=c(1,2),xlab="Interval",ylab="Number of steps")
+```
+
+Activity patterns differ between weekdays and weekends. During weekends, people walk more in the whole day. However, during weekdays, people walk more in the morning.
